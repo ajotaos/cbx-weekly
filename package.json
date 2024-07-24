@@ -1,0 +1,17 @@
+{
+	"name": "cbx-weekly",
+	"version": "1.0.0",
+	"scripts": {
+		"format": "biome check --write ."
+	},
+	"dependencies": {
+		"sst": "ion"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.8.3",
+		"@tsconfig/node20": "^20.1.4",
+		"@tsconfig/strictest": "^2.0.5",
+		"@types/aws-lambda": "8.10.141",
+		"typescript": "^5.5.3"
+	}
+}

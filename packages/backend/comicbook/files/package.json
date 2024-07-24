@@ -1,0 +1,21 @@
+{
+	"name": "@cbx-weekly/backend-comicbook-files",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"]
+	},
+	"dependencies": {
+		"@cbx-weekly/backend-core-errors": "workspace:*",
+		"file-type": "^19.3.0",
+		"jszip": "^3.10.1",
+		"node-unrar-js": "^2.0.2",
+		"rereadable-stream": "^1.4.14",
+		"unzipper": "^0.12.2",
+		"valibot": "^0.36.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.10",
+		"@types/unzipper": "^0.10.9",
+		"type-fest": "^4.21.0"
+	}
+}

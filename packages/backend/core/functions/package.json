@@ -1,0 +1,29 @@
+{
+	"name": "@cbx-weekly/backend-core-functions",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"]
+	},
+	"dependencies": {
+		"@aws-lambda-powertools/batch": "^2.5.0",
+		"@aws-lambda-powertools/idempotency": "^2.5.0",
+		"@middy/core": "^5.4.5",
+		"@middy/event-normalizer": "^5.4.5",
+		"@middy/http-content-encoding": "^5.4.5",
+		"@middy/http-content-negotiation": "^5.4.5",
+		"@middy/http-cors": "^5.4.5",
+		"@middy/http-error-handler": "^5.4.5",
+		"@middy/http-event-normalizer": "^5.4.5",
+		"@middy/http-header-normalizer": "^5.4.5",
+		"@middy/http-response-serializer": "^5.4.5",
+		"@middy/http-security-headers": "^5.4.5",
+		"@middy/http-urlencode-path-parser": "^5.4.5",
+		"@middy/util": "^5.4.5",
+		"valibot": "^0.36.0"
+	},
+	"devDependencies": {
+		"@types/aws-lambda": "8.10.141",
+		"@types/node": "^20.14.10",
+		"type-fest": "^4.21.0"
+	}
+}
