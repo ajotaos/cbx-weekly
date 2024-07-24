@@ -1,0 +1,16 @@
+{
+	"name": "@cbx-weekly/backend-core-dynamodb",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"]
+	},
+	"dependencies": {
+		"@cbx-weekly/backend-core-errors": "workspace:*",
+		"es-toolkit": "^1.19.0",
+		"string-ts": "^2.2.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.10",
+		"type-fest": "^4.21.0"
+	}
+}

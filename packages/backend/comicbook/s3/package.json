@@ -1,0 +1,22 @@
+{
+	"name": "@cbx-weekly/backend-comicbook-s3",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"],
+		"./valibot": ["./src/valibot/index.ts"]
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "^3.614.0",
+		"@aws-sdk/lib-storage": "^3.616.0",
+		"@aws-sdk/s3-request-presigner": "^3.617.0",
+		"@cbx-weekly/backend-core-files": "workspace:*",
+		"@cbx-weekly/backend-core-s3": "workspace:*",
+		"@cbx-weekly/backend-core-valibot": "workspace:*",
+		"image-dimensions": "^2.3.0",
+		"string-ts": "^2.2.0",
+		"ulidx": "^2.3.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.10"
+	}
+}

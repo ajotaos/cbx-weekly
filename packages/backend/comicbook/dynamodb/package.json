@@ -1,0 +1,20 @@
+{
+	"name": "@cbx-weekly/backend-comicbook-dynamodb",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"],
+		"./valibot": ["./src/valibot/index.ts"]
+	},
+	"dependencies": {
+		"@aws-sdk/client-dynamodb": "^3.614.0",
+		"@aws-sdk/lib-dynamodb": "^3.670.0",
+		"@cbx-weekly/backend-core-dynamodb": "workspace:*",
+		"@cbx-weekly/backend-core-valibot": "workspace:*",
+		"string-ts": "^2.2.0",
+		"ulidx": "^2.3.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.10",
+		"type-fest": "^4.21.0"
+	}
+}

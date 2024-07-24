@@ -1,0 +1,11 @@
+{
+	"name": "@cbx-weekly/backend-core-errors",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"]
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.10",
+		"type-fest": "^4.21.0"
+	}
+}

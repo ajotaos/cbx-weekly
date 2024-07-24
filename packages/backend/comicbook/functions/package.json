@@ -1,0 +1,23 @@
+{
+	"name": "@cbx-weekly/backend-comicbook-functions",
+	"version": "0.0.0",
+	"dependencies": {
+		"@aws-sdk/client-dynamodb": "^3.614.0",
+		"@aws-sdk/client-s3": "^3.614.0",
+		"@cbx-weekly/backend-comicbook-dynamodb": "workspace:*",
+		"@cbx-weekly/backend-comicbook-files": "workspace:*",
+		"@cbx-weekly/backend-comicbook-s3": "workspace:*",
+		"@cbx-weekly/backend-core-crypto": "workspace:*",
+		"@cbx-weekly/backend-core-dynamodb": "workspace:*",
+		"@cbx-weekly/backend-core-functions": "workspace:*",
+		"@cbx-weekly/backend-core-valibot": "workspace:*",
+		"es-toolkit": "^1.19.0",
+		"http-errors": "^2.0.0",
+		"sharp": "^0.33.4",
+		"string-ts": "^2.2.0"
+	},
+	"devDependencies": {
+		"@types/http-errors": "^2.0.4",
+		"@types/node": "^20.14.10"
+	}
+}
