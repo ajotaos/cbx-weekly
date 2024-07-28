@@ -3,11 +3,9 @@ import * as v from 'valibot';
 import { omit } from 'es-toolkit';
 import { camelKeys } from 'string-ts';
 
-import type { Readable } from 'node:stream';
-
 export type RawBucketObject = {
 	Key: string;
-	Body: Readable;
+	Body: Uint8Array;
 	Metadata: Record<string, string>;
 };
 

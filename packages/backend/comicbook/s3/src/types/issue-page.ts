@@ -4,8 +4,6 @@ import {
 	bucketObjectMetadata,
 } from '@cbx-weekly/backend-core-s3';
 
-import { Readable } from 'node:stream';
-
 import * as vx from '@cbx-weekly/backend-comicbook-valibot';
 import * as v from 'valibot';
 
@@ -23,12 +21,18 @@ export const issuePageBucketObjectSchema = bucketObject(
 				),
 			]),
 		),
-		Body: v.instance(Readable),
+		Body: v.instance(Uint8Array),
 		Metadata: bucketObjectMetadata(
 			v.object({
-				'x-amz-meta-id': v.pipe(v.string(), vx.ulid()),
-				'x-amz-meta-mime-type': v.literal('image/jpeg'),
-				'x-amz-meta-dimensions': v.pipe(
+				id: v.pipe(v.string(), vx.ulid()),
+				index: v.pipe(
+					v.string(),
+					v.transform((value) => Number(value)),
+					v.pipe(v.number(), v.integer(), v.minValue(1)),
+				),
+				'issue-id': v.pipe(v.string(), vx.ulid()),
+				'mime-type': v.literal('image/jpeg'),
+				dimensions: v.pipe(
 					v.string(),
 					v.transform((value) =>
 						value.split('x').map((value) => Number(value)),
@@ -39,12 +43,6 @@ export const issuePageBucketObjectSchema = bucketObject(
 					]),
 					v.transform((value) => ({ width: value[0], height: value[1] })),
 				),
-				'x-amz-meta-index': v.pipe(
-					v.string(),
-					v.transform((value) => Number(value)),
-					v.pipe(v.number(), v.integer(), v.minValue(1)),
-				),
-				'x-amz-meta-issue-id': v.pipe(v.string(), vx.ulid()),
 			}),
 		),
 	}),

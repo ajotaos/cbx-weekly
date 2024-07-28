@@ -10,18 +10,21 @@ import {
 
 import { S3Client } from '@aws-sdk/client-s3';
 
-const s3Client = new S3Client({ region: environment.AWS_REGION });
+const s3Client = new S3Client({
+	region: environment.AWS_REGION,
+	forcePathStyle: true,
+});
 
 const idempotency = new Idempotency({
 	tableName: environment.IDEMPOTENCY_TABLE_NAME,
 	options: {
 		eventKeyJmesPath: '"body"."issueId"',
-		expiresAfterSeconds: 15,
+		expiresAfterSeconds: 180,
 	},
 });
 
 export const main = makeApiGateway(eventSchema)
-	.idempotent(idempotency)
+	// .idempotent(idempotency)
 	.handler(async (event) => {
 		const { upload } = await signIssuePagesUploadObjectUrlToBucket(
 			{

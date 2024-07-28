@@ -2,25 +2,24 @@ import JSZip from 'jszip';
 
 import { join } from 'node:path';
 
-import type { Readable } from 'node:stream';
-
 export function createCbzArchiver() {
 	const zip = new JSZip();
 
 	return {
-		page(body: Readable, index: number) {
+		page(body: Uint8Array, index: number) {
 			const number = (index + 1).toString().padStart(3, '0');
 			const filename = join(`${number}.jpg`);
+			console.log(filename);
 
 			zip.file(filename, body, {
 				binary: true,
 			});
 		},
 		stream() {
-			return zip.generateNodeStream({
-				type: 'nodebuffer',
-				streamFiles: true,
-			}) as Readable;
+			return zip.generateAsync({
+				type: 'uint8array',
+				// streamFiles: true,
+			});
 		},
 	};
 }

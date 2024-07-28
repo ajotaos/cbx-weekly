@@ -13,5 +13,11 @@
 		"@tsconfig/strictest": "^2.0.5",
 		"@types/aws-lambda": "8.10.141",
 		"typescript": "^5.5.3"
+	},
+	"pnpm": {
+		"supportedArchitectures": {
+			"cpu": ["x64", "arm64"],
+			"os": ["linux", "current"]
+		}
 	}
 }

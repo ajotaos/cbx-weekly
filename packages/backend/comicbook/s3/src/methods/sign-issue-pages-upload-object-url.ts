@@ -10,8 +10,6 @@ import * as v from 'valibot';
 
 import type { RawIssuePagesUploadBucketObject } from '../types';
 
-import type { StripAmzMetaPrefixKeys } from '@cbx-weekly/backend-core-s3';
-
 import type { S3Client } from '@aws-sdk/client-s3';
 
 export type SignIssuePagesUploadObjectUrlToBucketProps = {
@@ -32,11 +30,9 @@ export async function signIssuePagesUploadObjectUrlToBucket(
 
 	const metadata = {
 		id,
-		'mime-type': mimeType,
 		'issue-id': issueId,
-	} satisfies StripAmzMetaPrefixKeys<
-		RawIssuePagesUploadBucketObject['Metadata']
-	>;
+		'mime-type': mimeType,
+	} satisfies RawIssuePagesUploadBucketObject['Metadata'];
 
 	const url = await getSignedUrl(
 		client,
@@ -45,10 +41,9 @@ export async function signIssuePagesUploadObjectUrlToBucket(
 			Key: key,
 			Metadata: metadata,
 			ContentType: `${mimeType}`,
-			Expires: new Date(Date.now() + 60 * 60 * 1_000),
 		}),
 		{
-			expiresIn: 3 * 60,
+			// expiresIn: 3 * 60,
 		},
 	);
 

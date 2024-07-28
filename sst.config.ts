@@ -4,7 +4,7 @@ export default $config({
 		return {
 			name: 'cbx-weekly',
 			removal: input?.stage === 'production' ? 'retain' : 'remove',
-			providers: { 'aws-native': true },
+			providers: { 'aws-native': { region: 'us-east-1' } },
 			home: 'aws',
 		};
 	},

@@ -1,10 +1,7 @@
 import { makeIssuePageBucketObjectKey } from '../keys';
 
-import { fileTypeFromStream } from 'file-type';
-import { imageDimensionsFromStream } from 'image-dimensions';
-
-import ExifTransformer from 'exif-be-gone';
-import { ReReadable } from 'rereadable-stream';
+import { fileTypeFromBuffer } from 'file-type';
+import { imageDimensionsFromData } from 'image-dimensions';
 
 import { Upload } from '@aws-sdk/lib-storage';
 
@@ -15,11 +12,7 @@ import * as v from 'valibot';
 
 import type { RawIssuePageBucketObject } from '../types';
 
-import type { StripAmzMetaPrefixKeys } from '@cbx-weekly/backend-core-s3';
-
 import type { S3Client } from '@aws-sdk/client-s3';
-
-import type { Readable } from 'node:stream';
 
 export type PutIssuePageObjectInBucketProps = {
 	index: number;
@@ -27,36 +20,32 @@ export type PutIssuePageObjectInBucketProps = {
 };
 
 export async function putIssuePageObjectInBucket(
-	body: Readable,
+	body: Uint8Array,
 	props: PutIssuePageObjectInBucketProps,
 	bucketName: string,
 	client: S3Client,
 ) {
 	const { index, issueId } = parseProps(props);
-
-	const _body = body.pipe(new ExifTransformer()).pipe(new ReReadable());
-
 	const { mimeType, dimensions } =
-		await extractBodyProps(_body).then(parseBodyProps);
+		await extractBodyProps(body).then(parseBodyProps);
 
 	const id = ulid();
-
 	const key = makeIssuePageBucketObjectKey({ id });
 
 	const metadata = {
 		id,
-		'mime-type': mimeType,
-		dimensions: `${dimensions.width}x${dimensions.height}`,
 		index: `${index}`,
 		'issue-id': issueId,
-	} satisfies StripAmzMetaPrefixKeys<RawIssuePageBucketObject['Metadata']>;
+		'mime-type': mimeType,
+		dimensions: `${dimensions.width}x${dimensions.height}`,
+	} satisfies RawIssuePageBucketObject['Metadata'];
 
 	const upload = new Upload({
 		client,
 		params: {
 			Bucket: bucketName,
 			Key: key,
-			Body: _body.rewind(),
+			Body: body,
 			Metadata: metadata,
 			ContentType: mimeType,
 		},
@@ -94,16 +83,12 @@ const bodyPropsSchema = v.strictObject({
 	}),
 });
 
-async function extractBodyProps(body: ReReadable) {
-	const [mimeType, dimensions] = await Promise.all([
-		fileTypeFromStream(body.rewind()).then(
-			(file) => file?.mime ?? 'application/octet-stream',
-		),
-		imageDimensionsFromStream(body.rewind()).then((dimensions) => ({
-			width: dimensions?.width ?? 0,
-			height: dimensions?.height ?? 0,
-		})),
-	]);
+async function extractBodyProps(body: Uint8Array) {
+	const mimeType = await fileTypeFromBuffer(body).then(
+		(file) => file?.mime ?? 'application/octet-stream',
+	);
+
+	const dimensions = imageDimensionsFromData(body) ?? { width: 0, height: 0 };
 
 	return { mimeType, dimensions };
 }

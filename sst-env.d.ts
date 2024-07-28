@@ -15,6 +15,10 @@ declare module 'sst' {
 			name: string;
 			type: 'sst.aws.Dynamo';
 		};
+		ComicbookPagesUpdateIssuePages: {
+			name: string;
+			type: 'sst.aws.Function';
+		};
 		ComicbookS3: {
 			name: string;
 			type: 'sst.aws.Bucket';

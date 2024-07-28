@@ -11,48 +11,119 @@ const makeFunctionHandlerPath = makeFunctionHandlerPathFactory(
 	'pages',
 );
 
-const issuePagesQueue = new sst.aws.Queue(
-	prefixComponentName('IssuePagesQueue'),
+const updateIssuePagesQueueDLQ = new awsnative.sqs.Queue(
+	prefixComponentName('UpdateIssuePagesQueueDLQ'),
 );
 
-issuePagesQueue.subscribe({
-	handler: makeFunctionHandlerPath('update-issue-pages'),
-	environment: {
-		DYNAMODB_TABLE_NAME: dynamodb.table.name,
-		S3_BUCKET_NAME: s3.bucket.name,
-		IDEMPOTENCY_TABLE_NAME: idempotency.table.name,
+const updateIssuePagesQueue = new awsnative.sqs.Queue(
+	prefixComponentName('UpdateIssuePagesQueue'),
+	{
+		redrivePolicy: {
+			deadLetterTargetArn: updateIssuePagesQueueDLQ.arn,
+			maxReceiveCount: 1,
+		},
 	},
-	permissions: [
-		{ actions: ['s3:UpdateItem'], resources: [dynamodb.table.arn] },
-		{
-			actions: ['s3:GetObject', 's3:PutObject'],
-			resources: [$interpolate`${s3.bucket.name}/*`],
-		},
-		{
-			actions: [
-				'dynamodb:GetItem',
-				'dynamodb:PutItem',
-				'dynamodb:UpdateItem',
-				'dynamodb:DeleteItem',
-			],
-			resources: [idempotency.table.arn],
-		},
-	],
-});
+);
 
-new awsnative.events.Rule(prefixComponentName('PutUploadObjectRule'), {
-	eventPattern: {
-		source: ['aws.s3'],
-		detailType: ['Object Created'],
-		detail: {
-			'bucket.name': [s3.bucket.name],
-			'object.key': [{ wildcard: 'issues/pages/uploads/*.zip' }],
+const updateIssuePagesFunction = new sst.aws.Function(
+	prefixComponentName('UpdateIssuePages'),
+	{
+		handler: makeFunctionHandlerPath('update-issue-pages'),
+		layers: ['arn:aws:lambda:us-east-1:914198884549:layer:sharp-layer:2'],
+		nodejs: {
+			esbuild: {
+				external: ['sharp'],
+			},
 		},
+		// nodejs: {
+		// 	install: ['sharp'],
+		// },
+		environment: {
+			DYNAMODB_TABLE_NAME: dynamodb.table.name,
+			S3_BUCKET_NAME: s3.bucket.name,
+			IDEMPOTENCY_TABLE_NAME: idempotency.table.name,
+		},
+		permissions: [
+			{ actions: ['s3:UpdateItem'], resources: [dynamodb.table.arn] },
+			{
+				actions: ['s3:GetObject', 's3:PutObject'],
+				resources: [$interpolate`${s3.bucket.arn}/*`],
+			},
+			{
+				actions: [
+					'dynamodb:GetItem',
+					'dynamodb:PutItem',
+					'dynamodb:UpdateItem',
+					'dynamodb:DeleteItem',
+				],
+				resources: [idempotency.table.arn],
+			},
+			{
+				actions: [
+					'sqs:ReceiveMessage',
+					'sqs:DeleteMessage',
+					'sqs:GetQueueAttributes',
+				],
+				resources: [updateIssuePagesQueue.arn],
+			},
+		],
+		timeout: '2 minutes',
 	},
-	targets: [
-		{
-			id: 'IssuePagesQueue',
-			arn: issuePagesQueue.arn,
+);
+
+const putIssuePagesUploadObjectRule = new awsnative.events.Rule(
+	prefixComponentName('PutIssuePagesUploadObjectRule'),
+	{
+		eventPattern: {
+			source: ['aws.s3'],
+			'detail-type': ['Object Created'],
+			detail: {
+				'bucket.name': [s3.bucket.name],
+				'object.key': [{ prefix: 'issues/pages/uploads/' }, { suffix: '.zip' }],
+			},
 		},
-	],
-});
+		targets: [
+			{
+				id: 'UpdateIssuePagesQueueTarget',
+				arn: updateIssuePagesQueue.arn,
+			},
+		],
+	},
+);
+
+new awsnative.sqs.QueueInlinePolicy(
+	prefixComponentName('UpdateIssuePagesQueuePolicy'),
+	{
+		queue: updateIssuePagesQueue.queueUrl,
+		policyDocument: $jsonParse(
+			aws.iam.getPolicyDocumentOutput({
+				statements: [
+					{
+						principals: [
+							{ type: 'Service', identifiers: ['events.amazonaws.com'] },
+						],
+						actions: ['sqs:SendMessage'],
+						resources: [updateIssuePagesQueue.arn],
+						conditions: [
+							{
+								test: 'ArnEquals',
+								variable: 'aws:SourceArn',
+								values: [putIssuePagesUploadObjectRule.arn],
+							},
+						],
+					},
+				],
+			}).json,
+		),
+	},
+);
+
+new awsnative.lambda.EventSourceMapping(
+	prefixComponentName('UpdateIssuePagesQueueMapping'),
+	{
+		eventSourceArn: updateIssuePagesQueue.arn,
+		functionName: updateIssuePagesFunction.name,
+		batchSize: 5,
+		functionResponseTypes: ['ReportBatchItemFailures'],
+	},
+);

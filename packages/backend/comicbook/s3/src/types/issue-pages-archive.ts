@@ -4,8 +4,6 @@ import {
 	bucketObjectMetadata,
 } from '@cbx-weekly/backend-core-s3';
 
-import { Readable } from 'node:stream';
-
 import * as vx from '@cbx-weekly/backend-comicbook-valibot';
 import * as v from 'valibot';
 
@@ -24,12 +22,12 @@ export const issuePagesArchiveBucketObjectSchema = bucketObject(
 				),
 			]),
 		),
-		Body: v.instance(Readable),
+		Body: v.instance(Uint8Array),
 		Metadata: bucketObjectMetadata(
 			v.object({
-				'x-amz-meta-id': v.pipe(v.string(), vx.ulid()),
-				'x-amz-meta-mime-type': v.literal('application/zip'),
-				'x-amz-meta-issue-id': v.pipe(v.string(), vx.ulid()),
+				id: v.pipe(v.string(), vx.ulid()),
+				'issue-id': v.pipe(v.string(), vx.ulid()),
+				'mime-type': v.literal('application/zip'),
 			}),
 		),
 	}),

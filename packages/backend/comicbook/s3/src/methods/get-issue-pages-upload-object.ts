@@ -34,14 +34,21 @@ export async function getIssuePagesUploadObjectFromBucket(
 			}),
 		)
 		.then((output) =>
-			output.Body ? parseBucketObject(output) : throwNotFoundError(),
+			output.Body
+				? {
+						key,
+						// biome-ignore lint/style/noNonNullAssertion: <explanation>
+						body: () => output.Body!.transformToByteArray(),
+						metadata: parseBucketObjectMetadata(output.Metadata),
+					}
+				: throwNotFoundError(),
 		);
 
 	return { object };
 }
 
-function parseBucketObject(input: unknown) {
-	return v.parse(issuePagesUploadBucketObjectSchema, input, {
+function parseBucketObjectMetadata(input: unknown) {
+	return v.parse(issuePagesUploadBucketObjectSchema.entries.Metadata, input, {
 		abortEarly: true,
 		abortPipeEarly: true,
 	});

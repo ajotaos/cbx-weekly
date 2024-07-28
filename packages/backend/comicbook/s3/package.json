@@ -11,13 +11,13 @@
 		"@cbx-weekly/backend-comicbook-valibot": "workspace:*",
 		"@cbx-weekly/backend-core-errors": "workspace:*",
 		"@cbx-weekly/backend-core-s3": "workspace:*",
-		"exif-be-gone": "^1.5.1",
 		"file-type": "^19.3.0",
 		"image-dimensions": "^2.3.0",
-		"rereadable-stream": "^1.4.14",
+		"ulidx": "^2.3.0",
 		"valibot": "^0.36.0"
 	},
 	"devDependencies": {
+		"@smithy/types": "^3.3.0",
 		"@types/node": "^20.14.10",
 		"type-fest": "^4.21.0"
 	}

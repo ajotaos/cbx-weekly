@@ -1,20 +1,18 @@
-import { createReadStream } from 'node:fs';
+import sharp from 'sharp';
+
+import { fileTypeFromBuffer, fileTypeFromStream } from 'file-type';
+import { Open } from 'unzipper';
+
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileTypeFromStream } from 'file-type';
-import { ReReadable } from 'rereadable-stream';
-import { Open } from 'unzipper';
 
 import { throwUnsupportedFileTypeError } from '@cbx-weekly/backend-core-errors';
 
 import type { Readable } from 'node:stream';
 
-export async function createZipUnarchiver(props: Readable) {
-	const body = props.pipe(new ReReadable());
-
-	const mimeType = await getMimeTypeFromStream(body.rewind());
-
+export async function createZipUnarchiver(body: Uint8Array) {
+	const mimeType = await getMimeTypeFromBuffer(body);
 	if (mimeType !== 'application/zip') {
 		throwUnsupportedFileTypeError(mimeType);
 	}
@@ -23,7 +21,7 @@ export async function createZipUnarchiver(props: Readable) {
 		async *files() {
 			const tempDir = await mkdtemp(join(tmpdir(), '/'));
 			const zipFilePath = join(tempDir, 'compressed.zip');
-			await writeFile(zipFilePath, body.rewind());
+			await writeFile(zipFilePath, body);
 
 			const extractDir = join(tempDir, 'extracted');
 			await mkdir(extractDir);
@@ -35,11 +33,6 @@ export async function createZipUnarchiver(props: Readable) {
 	};
 }
 
-async function getMimeTypeFromStream(body: Readable) {
-	const fileType = await fileTypeFromStream(body);
-	return fileType?.mime ?? 'application/octet-stream';
-}
-
 async function* processZipFiles(zipFilePath: string, extractDir: string) {
 	const directory = await Open.file(zipFilePath);
 	await directory.extract({ path: extractDir });
@@ -49,20 +42,35 @@ async function* processZipFiles(zipFilePath: string, extractDir: string) {
 		.sort((a, b) => a.path.localeCompare(b.path, 'en'));
 
 	for (const file of files) {
-		const extractedFilePath = join(extractDir, file.path);
-
-		let rereadable: ReReadable;
+		const mimeType = await getMimeTypeFromStream(file.stream());
+		if (mimeType !== 'image/jpeg') {
+			continue;
+		}
 
 		yield {
-			stream() {
-				if (!rereadable) {
-					rereadable = createReadStream(extractedFilePath).pipe(
-						new ReReadable(),
-					);
-				}
+			async buffer() {
+				const buffer = await file.buffer();
+				const pipeline = sharp(buffer);
 
-				return rereadable.rewind();
+				return pipeline
+					.jpeg({
+						quality: 100,
+						progressive: true,
+						chromaSubsampling: '4:4:4',
+						mozjpeg: true,
+					})
+					.toBuffer();
 			},
 		};
 	}
+}
+
+async function getMimeTypeFromBuffer(body: Uint8Array) {
+	const fileType = await fileTypeFromBuffer(body);
+	return fileType?.mime ?? 'application/octet-stream';
+}
+
+async function getMimeTypeFromStream(body: Readable) {
+	const fileType = await fileTypeFromStream(body);
+	return fileType?.mime ?? 'application/octet-stream';
 }

@@ -31,7 +31,7 @@ export function s3EventNotificationEventBridgeEvent<
 
 export const eventBridgeEventSchema = v.object({
 	version: v.string(),
-	Id: v.string(),
+	id: v.string(),
 	source: v.string(),
 	account: v.string(),
 	time: v.pipe(v.string(), v.isoTimestamp()),
