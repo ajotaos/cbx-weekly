@@ -1,51 +1,50 @@
-import { environment } from './types/env';
-import { recordSchema } from './types/record';
+import { Resource } from 'sst';
+
+import { recordSchema } from './record';
 
 import { updateIssueItemPagesInTable } from '@cbx-weekly/backend-comicbook-dynamodb';
 import {
+	deleteIssuePagesUploadObjectFromBucket,
 	getIssuePagesUploadObjectFromBucket,
 	putIssuePageObjectInBucket,
 	putIssuePagesArchiveObjectInBucket,
 } from '@cbx-weekly/backend-comicbook-s3';
 
 import {
-	createCbzArchiver,
-	createZipUnarchiver,
+	createIssuePagesArchiver,
+	createIssuePagesUploadUnarchiver,
 } from '@cbx-weekly/backend-comicbook-files';
-import { Idempotency, makeSqs } from '@cbx-weekly/backend-core-functions';
+
+import { createSqs } from '@cbx-weekly/backend-core-functions';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client } from '@aws-sdk/client-s3';
 
-import type { IssuePageBucketObject } from '@cbx-weekly/backend-comicbook-s3';
+const dynamodbClient = new DynamoDBClient();
+const s3Client = new S3Client();
 
-import type { Readable } from 'node:stream';
-
-const dynamodbClient = new DynamoDBClient({ region: environment.AWS_REGION });
-const s3Client = new S3Client({ region: environment.AWS_REGION });
-
-const idempotency = new Idempotency({
-	tableName: environment.IDEMPOTENCY_TABLE_NAME,
-	options: {
-		eventKeyJmesPath: '"body"."issueId"',
-		expiresAfterSeconds: 180,
-	},
-});
-
-export const main = makeSqs(recordSchema)
-	.idempotent(idempotency)
-	.handler(async (record) => {
+export const main = createSqs(recordSchema)
+	.idempotent(Resource.ComicbookIdempotencyTable.name, {
+		keyPath: '"body"."detail"."object"."key"',
+		expiresAfterSeconds: 300,
+	})
+	.recordHandler(async (record) => {
 		const { object: issuePagesUploadObject } =
 			await getIssuePagesUploadObjectFromBucket(
-				record.body.detail.object.key,
-				environment.S3_BUCKET_NAME,
+				{
+					id: record.body.detail.object.key.id,
+					issueId: record.body.detail.object.key.issueId,
+				},
+				Resource.ComicbookS3Bucket.name,
 				s3Client,
 			);
 
+		const issuePagesUpload = await issuePagesUploadObject.body();
+
 		const { object } = await putIssuePagesAndArchiveObjectsInBucket(
-			issuePagesUploadObject.body,
+			issuePagesUpload,
 			{ issueId: issuePagesUploadObject.metadata.issueId },
-			environment.S3_BUCKET_NAME,
+			Resource.ComicbookS3Bucket.name,
 			s3Client,
 		);
 
@@ -55,42 +54,52 @@ export const main = makeSqs(recordSchema)
 				pageIds: object.metadata.pages.ids,
 				archiveId: object.metadata.archive.id,
 			},
-			environment.DYNAMODB_TABLE_NAME,
+			Resource.ComicbookDynamodbTable.name,
 			dynamodbClient,
+		);
+
+		await deleteIssuePagesUploadObjectFromBucket(
+			{
+				id: issuePagesUploadObject.metadata.id,
+				issueId: issuePagesUploadObject.metadata.issueId,
+			},
+			Resource.ComicbookS3Bucket.name,
+			s3Client,
 		);
 	});
 
 async function putIssuePagesAndArchiveObjectsInBucket(
-	body: Readable,
+	body: Uint8Array,
 	props: { issueId: string },
 	bucketName: string,
 	client: S3Client,
 ) {
-	const zipUnarchiver = await createZipUnarchiver(body);
-	const cbzArchiver = createCbzArchiver();
+	const issuePagesUploadUnarchiver =
+		await createIssuePagesUploadUnarchiver(body);
+	const issuePagesArchiver = createIssuePagesArchiver();
 
 	const issuePageIds: Array<string> = [];
 
-	let index = 0;
+	for await (const file of issuePagesUploadUnarchiver.files()) {
+		const issuePage = await file.buffer();
 
-	for await (const file of zipUnarchiver.files()) {
 		const { object: issuePageObject } = await putIssuePageObjectInBucket(
-			file.stream(),
-			{ index, issueId: props.issueId },
+			issuePage,
+			{ issueId: props.issueId },
 			bucketName,
 			client,
 		);
 
+		issuePagesArchiver.page(issuePage, issuePageIds.length);
+
 		issuePageIds.push(issuePageObject.metadata.id);
-
-		cbzArchiver.page(file.stream(), index);
-
-		index += 1;
 	}
+
+	const issuePage = await issuePagesArchiver.buffer();
 
 	const { object: issuePagesArchiveObject } =
 		await putIssuePagesArchiveObjectInBucket(
-			cbzArchiver.stream(),
+			issuePage,
 			{ issueId: props.issueId },
 			bucketName,
 			client,

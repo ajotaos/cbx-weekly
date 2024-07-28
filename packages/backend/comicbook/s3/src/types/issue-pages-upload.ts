@@ -1,43 +1,25 @@
-import {
-	bucketObject,
-	bucketObjectKey,
-	bucketObjectMetadata,
-} from '@cbx-weekly/backend-core-s3';
+import { bucketObjectMetadata } from '@cbx-weekly/backend-core-s3';
 
-import { Readable } from 'node:stream';
-
-import * as vx from '@cbx-weekly/backend-comicbook-valibot';
+import * as vx from '@cbx-weekly/shared-valibot';
 import * as v from 'valibot';
 
-export const issuePagesUploadBucketObjectSchema = bucketObject(
+export const issuePagesUploadBucketObjectMetadataSchema = bucketObjectMetadata(
 	v.object({
-		Key: bucketObjectKey(
-			v.strictTuple([
-				v.literal('issues'),
-				v.literal('pages'),
-				v.literal('uploads'),
-				v.pipe(
-					v.string(),
-					v.endsWith('.zip'),
-					v.transform((value) => value.slice(0, -4)),
-					vx.ulid(),
-				),
-			]),
-		),
-		Body: v.instance(Readable),
-		Metadata: bucketObjectMetadata(
-			v.object({
-				'x-amz-meta-id': v.pipe(v.string(), vx.ulid()),
-				'x-amz-meta-mime-type': v.literal('application/zip'),
-				'x-amz-meta-issue-id': v.pipe(v.string(), vx.ulid()),
-			}),
-		),
+		id: v.pipe(v.string(), vx.ulid()),
+		'issue-id': v.pipe(v.string(), vx.ulid()),
 	}),
 );
 
-export type RawIssuePagesUploadBucketObject = v.InferInput<
-	typeof issuePagesUploadBucketObjectSchema
->;
-export type IssuePagesUploadBucketObject = v.InferOutput<
-	typeof issuePagesUploadBucketObjectSchema
->;
+export type IssuePagesUploadBucketObject = {
+	body: () => Promise<Uint8Array>;
+	metadata: IssuePagesUploadBucketObject.Metadata;
+};
+
+export declare namespace IssuePagesUploadBucketObject {
+	type Metadata = v.InferOutput<
+		typeof issuePagesUploadBucketObjectMetadataSchema
+	>;
+	namespace Metadata {
+		type Raw = v.InferInput<typeof issuePagesUploadBucketObjectMetadataSchema>;
+	}
+}

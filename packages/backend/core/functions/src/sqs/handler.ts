@@ -1,3 +1,5 @@
+import { Idempotency } from '../idempotency';
+
 import {
 	BatchProcessor,
 	EventType,
@@ -7,10 +9,6 @@ import {
 } from '@aws-lambda-powertools/batch';
 
 import { makeIdempotent } from '@aws-lambda-powertools/idempotency';
-import {
-	makeIdempotencyConfig,
-	makeIdempotencyPersistenceStore,
-} from '../idempotency';
 
 import middy from '@middy/core';
 
@@ -18,22 +16,22 @@ import eventNormalizer from '@middy/event-normalizer';
 
 import * as v from 'valibot';
 
-import type { BaseSqsRecord } from './types';
-
-import type { Idempotency } from '../idempotency';
+import type { SqsRecord } from './types';
 
 import type { Context, SQSEvent } from 'aws-lambda';
 
-export function makeSqs<TRecordSchema extends v.GenericSchema<BaseSqsRecord>>(
-	recordSchema: TRecordSchema,
-) {
+import type { PartialDeep } from 'type-fest';
+
+export function createSqs<
+	TRecordSchema extends v.GenericSchema<PartialDeep<SqsRecord>>,
+>(recordSchema: TRecordSchema) {
 	type Handler = (
 		record: v.InferOutput<TRecordSchema>,
 		context: Context,
 	) => Promise<void>;
 
 	return {
-		handler(handler: Handler) {
+		recordHandler(handler: Handler) {
 			const batchProcessor = new BatchProcessor(EventType.SQS);
 
 			return middy()
@@ -49,31 +47,23 @@ export function makeSqs<TRecordSchema extends v.GenericSchema<BaseSqsRecord>>(
 					),
 				);
 		},
-		idempotent(idempotency: Idempotency) {
-			const idempotencyPersistenceStore = makeIdempotencyPersistenceStore(
-				idempotency.tableName,
-			);
-			const idempotencyConfig = makeIdempotencyConfig(idempotency.options);
+		idempotent(tableName: string, options: Idempotency.Options) {
+			const idempotency = Idempotency.create(tableName, options);
 
 			return {
-				handler(handler: Handler) {
+				recordHandler(handler: Handler) {
 					const batchProcessor = new BatchProcessor(EventType.SQS);
 
 					return middy()
 						.use(eventNormalizer())
 						.handler((event: SQSEvent, context) => {
-							idempotencyConfig.registerLambdaContext(context);
+							idempotency.config.registerLambdaContext(context);
 
 							return processPartialResponse(
 								event,
 								middy()
 									.use(recordValidator(recordSchema))
-									.handler(
-										makeIdempotent(handler, {
-											persistenceStore: idempotencyPersistenceStore,
-											config: idempotencyConfig,
-										}),
-									),
+									.handler(makeIdempotent(handler, idempotency)),
 								batchProcessor,
 								{
 									context,
@@ -86,8 +76,8 @@ export function makeSqs<TRecordSchema extends v.GenericSchema<BaseSqsRecord>>(
 	};
 }
 
-export function makeSqsFifo<
-	TRecordSchema extends v.GenericSchema<BaseSqsRecord>,
+export function createSqsFifo<
+	TRecordSchema extends v.GenericSchema<PartialDeep<SqsRecord>>,
 >(recordSchema: TRecordSchema) {
 	type Handler = (
 		record: v.InferOutput<TRecordSchema>,
@@ -95,7 +85,7 @@ export function makeSqsFifo<
 	) => Promise<void>;
 
 	return {
-		handler(handler: Handler) {
+		recordHandler(handler: Handler) {
 			const batchProcessor = new SqsFifoPartialProcessor();
 
 			return middy()
@@ -111,31 +101,23 @@ export function makeSqsFifo<
 					),
 				);
 		},
-		idempotent(idempotency: Idempotency) {
-			const idempotencyPersistenceStore = makeIdempotencyPersistenceStore(
-				idempotency.tableName,
-			);
-			const idempotencyConfig = makeIdempotencyConfig(idempotency.options);
+		idempotent(tableName: string, options: Idempotency.Options) {
+			const idempotency = Idempotency.create(tableName, options);
 
 			return {
-				handler(handler: Handler) {
+				recordHandler(handler: Handler) {
 					const batchProcessor = new SqsFifoPartialProcessor();
 
 					return middy()
 						.use(eventNormalizer())
 						.handler((event: SQSEvent, context) => {
-							idempotencyConfig.registerLambdaContext(context);
+							idempotency.config.registerLambdaContext(context);
 
 							return processPartialResponseSync(
 								event,
 								middy()
 									.use(recordValidator(recordSchema))
-									.handler(
-										makeIdempotent(handler, {
-											persistenceStore: idempotencyPersistenceStore,
-											config: idempotencyConfig,
-										}),
-									),
+									.handler(makeIdempotent(handler, idempotency)),
 								batchProcessor,
 								{
 									context,
@@ -148,9 +130,9 @@ export function makeSqsFifo<
 	};
 }
 
-function recordValidator<TSchema extends v.GenericSchema<BaseSqsRecord>>(
-	schema: TSchema,
-): middy.MiddlewareObj<v.InferOutput<TSchema>> {
+function recordValidator<
+	TSchema extends v.GenericSchema<PartialDeep<SqsRecord>>,
+>(schema: TSchema): middy.MiddlewareObj<v.InferOutput<TSchema>> {
 	return {
 		before(request) {
 			request.event = v.parse(schema, request.event, {

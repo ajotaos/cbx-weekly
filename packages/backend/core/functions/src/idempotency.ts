@@ -1,41 +1,38 @@
 import { IdempotencyConfig } from '@aws-lambda-powertools/idempotency';
 import { DynamoDBPersistenceLayer } from '@aws-lambda-powertools/idempotency/dynamodb';
 
-export type IdempotencyOptions = {
-	eventKeyJmesPath?: string;
-	expiresAfterSeconds?: number;
-};
+import type { BasePersistenceLayer } from '@aws-lambda-powertools/idempotency/persistence';
+
+export declare namespace Idempotency {
+	type Options = {
+		keyPath?: string;
+		expiresAfterSeconds?: number;
+	};
+}
 
 export class Idempotency {
+	static create(tableName: string, options?: Idempotency.Options) {
+		const persistenceStore = new DynamoDBPersistenceLayer({
+			tableName,
+			keyAttr: 'Pk',
+			expiryAttr: 'Expiration',
+			inProgressExpiryAttr: 'InProgressExpiration',
+			statusAttr: 'Status',
+			dataAttr: 'Data',
+			validationKeyAttr: 'Validation',
+		});
+
+		const config = new IdempotencyConfig({
+			eventKeyJmesPath: options?.keyPath as string,
+			expiresAfterSeconds: options?.expiresAfterSeconds as number,
+			throwOnNoIdempotencyKey: true,
+		});
+
+		return new Idempotency(persistenceStore, config);
+	}
+
 	constructor(
-		private readonly props: { tableName: string; options?: IdempotencyOptions },
+		readonly persistenceStore: BasePersistenceLayer,
+		readonly config: IdempotencyConfig,
 	) {}
-
-	get tableName() {
-		return this.props.tableName;
-	}
-
-	get options() {
-		return this.props.options;
-	}
-}
-
-export function makeIdempotencyPersistenceStore(tableName: string) {
-	return new DynamoDBPersistenceLayer({
-		tableName,
-		keyAttr: 'Pk',
-		expiryAttr: 'Expiration',
-		inProgressExpiryAttr: 'InProgressExpiration',
-		statusAttr: 'Status',
-		dataAttr: 'Data',
-		validationKeyAttr: 'Validation',
-	});
-}
-
-export function makeIdempotencyConfig(options?: IdempotencyOptions) {
-	return new IdempotencyConfig({
-		eventKeyJmesPath: options?.eventKeyJmesPath as string,
-		expiresAfterSeconds: options?.expiresAfterSeconds as number,
-		throwOnNoIdempotencyKey: true,
-	});
 }

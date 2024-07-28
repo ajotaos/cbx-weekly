@@ -1,14 +1,4 @@
-export {
-	makeIssuePageBucketObjectKey,
-	type MakeIssuePageBucketObjectKeyProps,
-} from './issue-page';
-
-export {
-	makeIssuePagesArchiveBucketObjectKey,
-	type MakeIssuePagesArchiveBucketObjectKeyProps,
-} from './issue-pages-archive';
-
-export {
-	makeIssuePagesUploadBucketObjectKey,
-	type MakeIssuePagesUploadBucketObjectKeyProps,
-} from './issue-pages-upload';
+export * from './issue-page';
+export * from './issue-page-thumbnail';
+export * from './issue-pages-archive';
+export * from './issue-pages-upload';

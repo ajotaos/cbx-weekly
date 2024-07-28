@@ -9,8 +9,10 @@
 		"@aws-sdk/util-dynamodb": "^3.614.0",
 		"@cbx-weekly/backend-comicbook-valibot": "workspace:*",
 		"@cbx-weekly/backend-core-dynamodb": "workspace:*",
+		"@cbx-weekly/backend-core-errors": "workspace:*",
+		"@cbx-weekly/shared-valibot": "workspace:*",
 		"ulidx": "^2.3.0",
-		"valibot": "^0.36.0"
+		"valibot": "^0.42.0"
 	},
 	"devDependencies": {
 		"@types/node": "^20.14.10",

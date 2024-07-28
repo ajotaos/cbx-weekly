@@ -1,6 +1,6 @@
-import * as v from 'valibot';
+import { SERIES_NAME_REGEX } from '../regex';
 
-const SERIES_NAME_REGEX = /^\S+(?:\s\S)* \(\d{4}\)$/u;
+import * as v from 'valibot';
 
 export function seriesName<TInput extends string>(): v.RegexAction<
 	TInput,
@@ -17,6 +17,6 @@ export function seriesName(
 ): v.RegexAction<string, v.ErrorMessage<v.RegexIssue<string>> | undefined> {
 	return v.regex(
 		SERIES_NAME_REGEX,
-		message ?? ((issue) => `Invalid series name: Received ${issue.input}`),
+		message ?? ((issue) => `Invalid series name: Received "${issue.input}"`),
 	);
 }

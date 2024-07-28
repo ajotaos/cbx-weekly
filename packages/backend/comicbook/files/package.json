@@ -6,12 +6,11 @@
 	},
 	"dependencies": {
 		"@cbx-weekly/backend-core-errors": "workspace:*",
-		"file-type": "^19.3.0",
+		"file-type": "^19.5.0",
 		"jszip": "^3.10.1",
-		"node-unrar-js": "^2.0.2",
-		"rereadable-stream": "^1.4.14",
+		"sharp": "^0.33.4",
 		"unzipper": "^0.12.2",
-		"valibot": "^0.36.0"
+		"valibot": "^0.42.0"
 	},
 	"devDependencies": {
 		"@types/node": "^20.14.10",

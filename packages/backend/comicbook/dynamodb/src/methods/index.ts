@@ -1,16 +1,13 @@
-export {
-	putPublisherItemInTable,
-	type PutPublisherItemInTableProps,
-} from './put-publisher-item';
-export {
-	putSeriesItemInTable,
-	type PutSeriesItemInTableProps,
-} from './put-series-item';
-export {
-	putIssueItemInTable,
-	type PutIssueItemInTableProps,
-} from './put-issue-item';
-export {
-	updateIssueItemPagesInTable,
-	type UpdateIssueItemPagesInTableProps,
-} from './update-issue-item-pages';
+export * from './get-publisher-item-by-id';
+export * from './get-publisher-item-by-slug';
+export * from './get-series-item-by-id';
+export * from './get-series-item-by-slug';
+export * from './get-issue-item-by-id';
+export * from './get-issue-item-by-slug';
+export * from './query-publisher-items';
+export * from './query-series-items-by-publisher';
+export * from './query-issue-items-by-series';
+export * from './put-publisher-item';
+export * from './put-series-item';
+export * from './put-issue-item';
+export * from './update-issue-item-pages';

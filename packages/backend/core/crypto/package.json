@@ -1,0 +1,14 @@
+{
+	"name": "@cbx-weekly/backend-core-crypto",
+	"version": "0.0.0",
+	"exports": {
+		".": ["./src/index.ts"]
+	},
+	"dependencies": {
+		"@cbx-weekly/backend-core-errors": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.10",
+		"type-fest": "^4.21.0"
+	}
+}

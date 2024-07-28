@@ -60,8 +60,7 @@ export function tableItem<
 >(schema: TItemSchema) {
 	return v.pipe(
 		schema,
-		v.transform((value) => omit(value, Array.from(keysToOmit))),
-		v.transform(deepCamelKeys),
+		v.transform((value) => deepCamelKeys(omit(value, Array.from(keysToOmit)))),
 	);
 }
 

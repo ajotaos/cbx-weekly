@@ -1,6 +1,10 @@
+import { createErrorHandler, isError } from './utils';
+
 class UnsupportedFileTypeError extends Error {
-	constructor(fileType: string) {
-		super(`The file type '${fileType}' is not supported.`);
+	constructor(readonly fileType: string) {
+		super(
+			`The file type "${fileType}" is not supported. Please provide a file with a supported format.`,
+		);
 
 		this.name = 'UnsupportedFileTypeError';
 
@@ -10,18 +14,15 @@ class UnsupportedFileTypeError extends Error {
 	}
 }
 
+// Function to throw the error
 export function throwUnsupportedFileTypeError(fileType: string): never {
 	throw new UnsupportedFileTypeError(fileType);
 }
 
-export function handleUnsupportedFileTypeError<TResult>(
-	handler: (error: UnsupportedFileTypeError) => TResult,
-) {
-	return (error: unknown) => {
-		if (error instanceof UnsupportedFileTypeError) {
-			return handler(error);
-		}
+// Error handler for the UnsupportedFileTypeError
+export const handleUnsupportedFileTypeError = createErrorHandler(
+	UnsupportedFileTypeError,
+);
 
-		throw error;
-	};
-}
+// Type guard to identify the error
+export const isUnsupportedFileTypeError = isError(UnsupportedFileTypeError);

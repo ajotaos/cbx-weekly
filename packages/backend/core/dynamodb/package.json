@@ -5,9 +5,10 @@
 		".": ["./src/index.ts"]
 	},
 	"dependencies": {
-		"es-toolkit": "^1.10.1",
+		"@cbx-weekly/backend-core-errors": "workspace:*",
+		"es-toolkit": "^1.19.0",
 		"string-ts": "^2.2.0",
-		"valibot": "^0.36.0"
+		"valibot": "^0.42.0"
 	},
 	"devDependencies": {
 		"@types/node": "^20.14.10",

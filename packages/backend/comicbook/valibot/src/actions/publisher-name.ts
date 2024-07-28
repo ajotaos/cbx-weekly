@@ -1,6 +1,6 @@
-import * as v from 'valibot';
+import { PUBLISHER_NAME_REGEX } from '../regex';
 
-const PUBLISHER_NAME_REGEX = /^\S+(?:\s\S)*$/u;
+import * as v from 'valibot';
 
 export function publisherName<TInput extends string>(): v.RegexAction<
 	TInput,
@@ -17,6 +17,6 @@ export function publisherName(
 ): v.RegexAction<string, v.ErrorMessage<v.RegexIssue<string>> | undefined> {
 	return v.regex(
 		PUBLISHER_NAME_REGEX,
-		message ?? ((issue) => `Invalid publisher name: Received ${issue.input}`),
+		message ?? ((issue) => `Invalid publisher name: Received "${issue.input}"`),
 	);
 }

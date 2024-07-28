@@ -1,6 +1,6 @@
-import * as v from 'valibot';
+import { ISSUE_NUMBER_REGEX } from '../regex';
 
-const ISSUE_NUMBER_REGEX = /^\d+(?:\.[A-Z0-9]+)?$/u;
+import * as v from 'valibot';
 
 export function issueNumber<TInput extends string>(): v.RegexAction<
 	TInput,
@@ -17,6 +17,6 @@ export function issueNumber(
 ): v.RegexAction<string, v.ErrorMessage<v.RegexIssue<string>> | undefined> {
 	return v.regex(
 		ISSUE_NUMBER_REGEX,
-		message ?? ((issue) => `Invalid issue number: Received ${issue.input}`),
+		message ?? ((issue) => `Invalid issue number: Received "${issue.input}"`),
 	);
 }

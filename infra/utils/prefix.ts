@@ -1,3 +1,3 @@
-export function prefixComponentNameFactory(prefix: string) {
-	return (name: string) => `${prefix}${name}`;
+export function prefix(prefix: string) {
+	return (string: string) => prefix + string;
 }

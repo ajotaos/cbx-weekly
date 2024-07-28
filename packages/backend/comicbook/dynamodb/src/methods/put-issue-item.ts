@@ -1,42 +1,38 @@
 import {
-	issueTableItemKeys,
-	issueUniqueSlugTableItemKeys,
-	seriesTableItemKeys,
+	encodeIssueTableItemGsi1PartitionKey,
+	encodeIssueTableItemGsi1SortKey,
+	encodeIssueTableItemGsi2PartitionKey,
+	encodeIssueTableItemGsi2SortKey,
+	encodeIssueTableItemGsi3PartitionKey,
+	encodeIssueTableItemGsi3SortKey,
+	encodeIssueTableItemPartitionKey,
+	encodeIssueTableItemSortKey,
+	encodeIssueUniqueSlugTableItemPartitionKey,
+	encodeIssueUniqueSlugTableItemSortKey,
+	encodeSeriesTableItemPartitionKey,
+	encodeSeriesTableItemSortKey,
 } from '../keys';
 
-import { makeIssueSlug } from '../slug';
+import { slugifyIssueTitle } from '../slug';
 
 import { TransactWriteItemsCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 
 import { ulid } from 'ulidx';
 
-import * as vx from '@cbx-weekly/backend-comicbook-valibot';
+import * as vxx from '@cbx-weekly/backend-comicbook-valibot';
+import * as vx from '@cbx-weekly/shared-valibot';
 import * as v from 'valibot';
 
-import type {
-	RawIssueTableItem,
-	RawIssueUniqueSlugTableItem,
-	RawSeriesTableItem,
-} from '../types';
+import type { IssueTableItem, SeriesTableItem } from '../types';
 
 import type {
 	DynamoDBClient,
 	TransactWriteItem,
 } from '@aws-sdk/client-dynamodb';
 
-export type PutIssueItemInTableProps = {
-	title: {
-		publisher: string;
-		series: string;
-		number: string;
-	};
-	seriesId: string;
-	releaseDate: string;
-};
-
 export async function putIssueItemInTable(
-	props: PutIssueItemInTableProps,
+	props: PutIssueItemInTable.Props,
 	tableName: string,
 	client: DynamoDBClient,
 ) {
@@ -45,9 +41,9 @@ export async function putIssueItemInTable(
 	const transactItems: Array<TransactWriteItem> = [];
 
 	const rawSeriesItemKey = {
-		Pk: seriesTableItemKeys.makePk({ id: seriesId }),
-		Sk: seriesTableItemKeys.makeSk(),
-	} satisfies Pick<RawSeriesTableItem, 'Pk' | 'Sk'>;
+		Pk: encodeSeriesTableItemPartitionKey({ id: seriesId }),
+		Sk: encodeSeriesTableItemSortKey(),
+	} satisfies Pick<SeriesTableItem.Raw, 'Pk' | 'Sk'>;
 
 	transactItems.push({
 		ConditionCheck: {
@@ -68,18 +64,18 @@ export async function putIssueItemInTable(
 		},
 	});
 
-	const id = ulid();
-	const slug = makeIssueSlug(title);
+	const id = ulid().toLowerCase();
+	const slug = slugifyIssueTitle(title);
 
 	const rawIssueItem = {
-		Pk: issueTableItemKeys.makePk({ id }),
-		Sk: issueTableItemKeys.makeSk(),
-		Gsi1Pk: issueTableItemKeys.makeGsi1Pk({ slug }),
-		Gsi1Sk: issueTableItemKeys.makeGsi1Sk(),
-		Gsi2Pk: issueTableItemKeys.makeGsi2Pk({ seriesId }),
-		Gsi2Sk: issueTableItemKeys.makeGsi2Sk({ slug }),
-		Gsi3Pk: issueTableItemKeys.makeGsi3Pk({ releaseDate }),
-		Gsi3Sk: issueTableItemKeys.makeGsi3Sk({ slug }),
+		Pk: encodeIssueTableItemPartitionKey({ id }),
+		Sk: encodeIssueTableItemSortKey(),
+		Gsi1Pk: encodeIssueTableItemGsi1PartitionKey({ slug }),
+		Gsi1Sk: encodeIssueTableItemGsi1SortKey(),
+		Gsi2Pk: encodeIssueTableItemGsi2PartitionKey({ seriesId }),
+		Gsi2Sk: encodeIssueTableItemGsi2SortKey({ slug }),
+		Gsi3Pk: encodeIssueTableItemGsi3PartitionKey({ releaseDate }),
+		Gsi3Sk: encodeIssueTableItemGsi3SortKey({ slug }),
 		Id: id,
 		Slug: slug,
 		Title: {
@@ -87,12 +83,12 @@ export async function putIssueItemInTable(
 			Series: title.series,
 			Number: title.number,
 		},
-		SeriesId: seriesId,
 		ReleaseDate: releaseDate,
 		Pages: {
 			State: 'pending',
 		},
-	} satisfies RawIssueTableItem;
+		SeriesId: seriesId,
+	} satisfies IssueTableItem.Raw;
 
 	transactItems.push({
 		Put: {
@@ -105,17 +101,17 @@ export async function putIssueItemInTable(
 		},
 	});
 
-	const rawIssueUniqueSlugItem = {
-		Pk: issueUniqueSlugTableItemKeys.makePk({ slug }),
-		Sk: issueUniqueSlugTableItemKeys.makeSk(),
+	const rawUniqueIssueSlugItem = {
+		Pk: encodeIssueUniqueSlugTableItemPartitionKey({ slug }),
+		Sk: encodeIssueUniqueSlugTableItemSortKey(),
 		Id: id,
 		Slug: slug,
-	} satisfies RawIssueUniqueSlugTableItem;
+	} satisfies IssueTableItem.Unique.SlugTableItem.Raw;
 
 	transactItems.push({
 		Put: {
 			TableName: tableName,
-			Item: marshall(rawIssueUniqueSlugItem),
+			Item: marshall(rawUniqueIssueSlugItem),
 			ExpressionAttributeNames: {
 				'#Pk': 'Pk',
 			},
@@ -132,19 +128,30 @@ export async function putIssueItemInTable(
 	return { item: { id } };
 }
 
-function parseProps(input: unknown) {
-	return v.parse(propsSchema, input, {
+const parseProps = v.parser(
+	v.strictObject({
+		title: v.strictObject({
+			publisher: v.pipe(v.string(), vxx.publisherName()),
+			series: v.pipe(v.string(), vxx.seriesName()),
+			number: v.pipe(v.string(), vxx.issueNumber()),
+		}),
+		releaseDate: v.pipe(v.string(), v.isoDate()),
+		seriesId: v.pipe(v.string(), vx.ulid()),
+	}),
+	{
 		abortEarly: true,
 		abortPipeEarly: true,
-	});
-}
+	},
+);
 
-const propsSchema = v.strictObject({
-	title: v.strictObject({
-		publisher: v.pipe(v.string(), vx.publisherName()),
-		series: v.pipe(v.string(), vx.seriesName()),
-		number: v.pipe(v.string(), vx.issueNumber()),
-	}),
-	seriesId: v.pipe(v.string(), vx.ulid()),
-	releaseDate: v.pipe(v.string(), v.isoDate()),
-});
+export declare namespace PutIssueItemInTable {
+	type Props = {
+		title: {
+			publisher: string;
+			series: string;
+			number: string;
+		};
+		releaseDate: string;
+		seriesId: string;
+	};
+}

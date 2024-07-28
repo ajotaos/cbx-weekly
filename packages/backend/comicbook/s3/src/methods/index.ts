@@ -1,19 +1,12 @@
-export {
-	putIssuePageObjectInBucket,
-	type PutIssuePageObjectInBucketProps,
-} from './put-issue-page-object';
-
-export {
-	putIssuePagesArchiveObjectInBucket,
-	type PutIssuePagesArchiveObjectInBucketProps,
-} from './put-issue-pages-archive-object';
-
-export {
-	getIssuePagesUploadObjectFromBucket,
-	type GetIssuePagesUploadObjectFromBucketProps,
-} from './get-issue-pages-upload-object';
-
-export {
-	signIssuePagesUploadObjectUrlToBucket,
-	type SignIssuePagesUploadObjectUrlToBucketProps,
-} from './sign-issue-pages-upload-object-url';
+export * from './get-issue-page-object';
+export * from './get-issue-page-thumbnail-object';
+export * from './get-issue-pages-archive-object';
+export * from './get-issue-pages-upload-object';
+export * from './put-issue-page-object';
+export * from './put-issue-page-thumbnail-object';
+export * from './put-issue-pages-archive-object';
+export * from './sign-issue-pages-upload-object-url';
+export * from './delete-issue-page-object';
+export * from './delete-issue-page-thumbnail-object';
+export * from './delete-issue-pages-archive-object';
+export * from './delete-issue-pages-upload-object';

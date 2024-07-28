@@ -1,11 +1,15 @@
-import { makeBucketObjectKey } from '@cbx-weekly/backend-core-s3';
+import { encodeBucketObjectKey } from '@cbx-weekly/backend-core-s3';
 
-export type MakeIssuePagesArchiveBucketObjectKeyProps = {
-	id: string;
-};
+import type { IssuePagesArchiveBucketObject } from '../types';
 
-export function makeIssuePagesArchiveBucketObjectKey(
-	props: MakeIssuePagesArchiveBucketObjectKeyProps,
+export function encodeIssuePagesArchiveBucketObjectKey(
+	props: Pick<IssuePagesArchiveBucketObject.Metadata, 'id' | 'issueId'>,
 ) {
-	return makeBucketObjectKey('issues', 'pages', 'archives', `${props.id}.cbz`);
+	return encodeBucketObjectKey(
+		'issues',
+		props.issueId,
+		'pages',
+		'archives',
+		`${props.id}.cbz`,
+	);
 }

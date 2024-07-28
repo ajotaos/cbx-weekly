@@ -1,1 +1,1 @@
-export * as comicbook from './comicbook';
+export * as backend from './backend';

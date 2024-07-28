@@ -1,27 +1,30 @@
-import { environment } from './types/env';
-import { eventSchema } from './types/event';
+import { Resource } from 'sst';
+
+import { eventSchema } from './event';
 
 import { putPublisherItemInTable } from '@cbx-weekly/backend-comicbook-dynamodb';
 
-import { makeApiGateway } from '@cbx-weekly/backend-core-functions';
+import { createApiGateway } from '@cbx-weekly/backend-core-functions';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
-const dynamodbClient = new DynamoDBClient({ region: environment.AWS_REGION });
+const dynamodbClient = new DynamoDBClient();
 
-export const main = makeApiGateway(eventSchema).handler(async (event) => {
-	const { item } = await putPublisherItemInTable(
-		{
-			title: event.body.title,
-		},
-		environment.DYNAMODB_TABLE_NAME,
-		dynamodbClient,
-	);
+export const main = createApiGateway(eventSchema).eventHandler(
+	async (event) => {
+		const { item } = await putPublisherItemInTable(
+			{
+				title: event.body.title,
+			},
+			Resource.ComicbookDynamodbTable.name,
+			dynamodbClient,
+		);
 
-	return {
-		statusCode: 200,
-		body: {
-			publisher: { id: item.id },
-		},
-	};
-});
+		return {
+			statusCode: 200,
+			body: {
+				publisher: { id: item.id },
+			},
+		};
+	},
+);

@@ -1,2 +1,6 @@
 export * from './methods';
-export * from './types';
+export type {
+	PublisherTableItem,
+	SeriesTableItem,
+	IssueTableItem,
+} from './types';

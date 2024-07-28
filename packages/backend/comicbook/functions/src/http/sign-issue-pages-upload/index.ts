@@ -1,38 +1,31 @@
-import { environment } from './types/env';
-import { eventSchema } from './types/event';
+import { Resource } from 'sst';
+
+import { eventSchema } from './event';
 
 import { signIssuePagesUploadObjectUrlToBucket } from '@cbx-weekly/backend-comicbook-s3';
 
-import {
-	Idempotency,
-	makeApiGateway,
-} from '@cbx-weekly/backend-core-functions';
+import { createApiGateway } from '@cbx-weekly/backend-core-functions';
 
 import { S3Client } from '@aws-sdk/client-s3';
 
-const s3Client = new S3Client({ region: environment.AWS_REGION });
+const s3Client = new S3Client();
 
-const idempotency = new Idempotency({
-	tableName: environment.IDEMPOTENCY_TABLE_NAME,
-	options: {
-		eventKeyJmesPath: '"body"."issueId"',
-		expiresAfterSeconds: 15,
-	},
-});
-
-export const main = makeApiGateway(eventSchema)
-	.idempotent(idempotency)
-	.handler(async (event) => {
-		const { upload } = await signIssuePagesUploadObjectUrlToBucket(
+export const main = createApiGateway(eventSchema)
+	.idempotent(Resource.ComicbookIdempotencyTable.name, {
+		keyPath: '"pathParameters"."issueId"',
+		expiresAfterSeconds: 180,
+	})
+	.eventHandler(async (event) => {
+		const { url, upload } = await signIssuePagesUploadObjectUrlToBucket(
 			{
-				issueId: event.body.issueId,
+				issueId: event.pathParameters.issueId,
 			},
-			environment.S3_BUCKET_NAME,
+			Resource.ComicbookS3Bucket.name,
 			s3Client,
 		);
 
 		return {
 			statusCode: 200,
-			body: { upload },
+			body: { url, upload },
 		};
 	});

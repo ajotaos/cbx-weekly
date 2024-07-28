@@ -1,9 +1,6 @@
-import { makeIdempotent } from '@aws-lambda-powertools/idempotency';
+import { Idempotency } from '../idempotency';
 
-import {
-	makeIdempotencyConfig,
-	makeIdempotencyPersistenceStore,
-} from '../idempotency';
+import { makeIdempotent } from '@aws-lambda-powertools/idempotency';
 
 import middy from '@middy/core';
 
@@ -21,22 +18,23 @@ import { createError } from '@middy/util';
 
 import * as v from 'valibot';
 
-import type { BaseApiGatewayEvent, BaseApiGatewayResult } from './types';
-
-import type { Idempotency } from '../idempotency';
+import type { ApiGatewayEvent, ApiGatewayResult } from './types';
 
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
-export function makeApiGateway<
-	TEventSchema extends v.GenericSchema<BaseApiGatewayEvent>,
+import type { PartialDeep } from 'type-fest';
+
+export function createApiGateway<
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	TEventSchema extends v.GenericSchema<PartialDeep<ApiGatewayEvent>, any>,
 >(eventSchema: TEventSchema) {
-	type Handler<TResult extends BaseApiGatewayResult> = (
+	type Handler<TResult extends ApiGatewayResult> = (
 		event: v.InferOutput<TEventSchema>,
 		context: Context,
 	) => Promise<TResult>;
 
 	return {
-		handler<TResult extends BaseApiGatewayResult>(handler: Handler<TResult>) {
+		eventHandler<TResult extends ApiGatewayResult>(handler: Handler<TResult>) {
 			return middy()
 				.use(httpEventNormalizer())
 				.use(httpHeaderNormalizer())
@@ -71,14 +69,11 @@ export function makeApiGateway<
 				)
 				.handler(handler);
 		},
-		idempotent(idempotency: Idempotency) {
-			const idempotencyPersistenceStore = makeIdempotencyPersistenceStore(
-				idempotency.tableName,
-			);
-			const idempotencyConfig = makeIdempotencyConfig(idempotency.options);
+		idempotent(tableName: string, options: Idempotency.Options) {
+			const idempotency = Idempotency.create(tableName, options);
 
 			return {
-				handler<TResult extends BaseApiGatewayResult>(
+				eventHandler<TResult extends ApiGatewayResult>(
 					handler: Handler<TResult>,
 				) {
 					return middy()
@@ -113,12 +108,7 @@ export function makeApiGateway<
 								}),
 							}),
 						)
-						.handler(
-							makeIdempotent(handler, {
-								persistenceStore: idempotencyPersistenceStore,
-								config: idempotencyConfig,
-							}),
-						);
+						.handler(makeIdempotent(handler, idempotency));
 				},
 			};
 		},
@@ -134,58 +124,71 @@ function httpJsonBodyParser<
 				request.event.headers?.['Content-Type'] ??
 				request.event.headers?.['content-type'];
 
+			const contentTypePattern = /^application\/(.+\+)?json($|;.+)/;
+
 			const body = request.event.body;
 
-			if (contentType !== undefined && body === undefined) {
-				throw createError(
-					415,
-					JSON.stringify({
-						message:
-							"Request includes 'Content-Type' header, but no data is provided. Omit the header or include a valid body.",
-					}),
-					{
-						cause: { package: '@middy/http-json-body-parser' },
-					},
-				);
-			}
-
-			const mimePattern = /^application\/(.+\+)?json($|;.+)/;
-
-			if (
-				body !== undefined &&
-				(contentType === undefined || !mimePattern.test(contentType))
-			) {
-				throw createError(
-					415,
-					JSON.stringify({
-						message:
-							"Missing or invalid 'Content-Type' header. Only 'application/json' is supported.",
-					}),
-					{
-						cause: { package: '@middy/http-json-body-parser' },
-					},
-				);
-			}
-
-			if (contentType === 'application/json' && body !== undefined) {
-				try {
-					const data = request.event.isBase64Encoded
-						? Buffer.from(body, 'base64').toString()
-						: body;
-
-					request.event.body = JSON.parse(data);
-				} catch (err) {
-					// UnprocessableEntity
+			if (contentType !== undefined) {
+				if (!contentTypePattern.test(contentType)) {
 					throw createError(
 						415,
 						JSON.stringify({
 							message:
-								'Invalid JSON format. Please check the data structure and syntax.',
+								"Unsupported 'Content-Type' header value. The media type provided is not supported by the server. Use a supported content type.",
 						}),
 						{
-							cause: { package: '@middy/http-json-body-parser', data: err },
+							cause: { package: '@middy/http-json-body-parser' },
 						},
 					);
+				}
+
+				if (body === undefined) {
+					throw createError(
+						400,
+						JSON.stringify({
+							message:
+								"Request includes 'Content-Type' header, but no data is provided. Omit the header or include a valid body.",
+						}),
+						{
+							cause: { package: '@middy/http-json-body-parser' },
+						},
+					);
+				}
+			}
+
+			if (body !== undefined) {
+				if (contentType === undefined) {
+					throw createError(
+						400,
+						JSON.stringify({
+							message:
+								"Request body is provided, but 'Content-Type' header is missing. Please specify the content type.",
+						}),
+						{
+							cause: { package: '@middy/http-json-body-parser' },
+						},
+					);
+				}
+
+				if (contentType === 'application/json') {
+					try {
+						const data = request.event.isBase64Encoded
+							? Buffer.from(body, 'base64').toString()
+							: body;
+
+						request.event.body = JSON.parse(data);
+					} catch (err) {
+						throw createError(
+							400,
+							JSON.stringify({
+								message:
+									'Malformed JSON body. Please ensure the request body is valid JSON.',
+							}),
+							{
+								cause: { package: '@middy/http-json-body-parser', data: err },
+							},
+						);
+					}
 				}
 			}
 		},
@@ -193,7 +196,7 @@ function httpJsonBodyParser<
 }
 
 function httpEventValidator<
-	TSchema extends v.GenericSchema<BaseApiGatewayEvent>,
+	TSchema extends v.GenericSchema<PartialDeep<ApiGatewayEvent>>,
 >(schema: TSchema): middy.MiddlewareObj<v.InferOutput<TSchema>> {
 	return {
 		before(request) {
@@ -204,7 +207,7 @@ function httpEventValidator<
 
 			if (!parsedEventResult.success) {
 				throw createError(
-					400,
+					422,
 					JSON.stringify({
 						message:
 							'Invalid request. Please check the provided information for errors.',

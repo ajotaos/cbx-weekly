@@ -1,2 +1,7 @@
 export * from './methods';
-export * from './types';
+export type {
+	IssuePageBucketObject,
+	IssuePageThumbnailBucketObject,
+	IssuePagesArchiveBucketObject,
+	IssuePagesUploadBucketObject,
+} from './types';

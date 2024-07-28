@@ -1,9 +1,11 @@
 import { takeWhile } from 'es-toolkit';
 
-export function makeTableItemPartitionKey(...parts: Array<string>) {
+import type { NonEmptyTuple } from 'type-fest';
+
+export function encodeTableItemPartitionKey(...parts: NonEmptyTuple<string>) {
 	return [...parts, '#'].join(':');
 }
 
-export function makeTableItemSortKey(...parts: Array<string>) {
+export function encodeTableItemSortKey(...parts: Array<string>) {
 	return takeWhile([...parts, '#'], (part) => part !== '').join(':');
 }

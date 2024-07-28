@@ -4,18 +4,18 @@ import type {
 	SeriesTableItem,
 } from './types';
 
-export function makePublisherSlug(title: PublisherTableItem['title']) {
+export function slugifyPublisherTitle(title: PublisherTableItem['title']) {
 	return [slugifyPublisherName(title.name)].join('-');
 }
 
-export function makeSeriesSlug(title: SeriesTableItem['title']) {
+export function slugifySeriesTitle(title: SeriesTableItem['title']) {
 	return [
 		slugifyPublisherName(title.publisher),
 		slugifySeriesName(title.name),
 	].join('-');
 }
 
-export function makeIssueSlug(title: IssueTableItem['title']) {
+export function slugifyIssueTitle(title: IssueTableItem['title']) {
 	return [
 		slugifyPublisherName(title.publisher),
 		slugifySeriesName(title.series),

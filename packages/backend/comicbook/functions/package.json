@@ -8,11 +8,21 @@
 		"@cbx-weekly/backend-comicbook-files": "workspace:*",
 		"@cbx-weekly/backend-comicbook-s3": "workspace:*",
 		"@cbx-weekly/backend-comicbook-valibot": "workspace:*",
-		"@cbx-weekly/backend-core-env": "workspace:*",
+		"@cbx-weekly/backend-core-crypto": "workspace:*",
+		"@cbx-weekly/backend-core-dynamodb": "workspace:*",
+		"@cbx-weekly/backend-core-errors": "workspace:*",
 		"@cbx-weekly/backend-core-functions": "workspace:*",
-		"valibot": "^0.36.0"
+		"@cbx-weekly/backend-core-s3": "workspace:*",
+		"@cbx-weekly/shared-valibot": "workspace:*",
+		"es-toolkit": "^1.19.0",
+		"http-errors": "^2.0.0",
+		"sharp": "^0.33.4",
+		"string-ts": "^2.2.0",
+		"valibot": "^0.42.0"
 	},
 	"devDependencies": {
+		"@types/aws-lambda": "8.10.142",
+		"@types/http-errors": "^2.0.4",
 		"@types/node": "^20.14.10",
 		"type-fest": "^4.21.0"
 	}

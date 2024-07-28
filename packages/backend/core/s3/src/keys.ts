@@ -1,5 +1,5 @@
-type NonEmptyArray<T> = [T, ...Array<T>];
+import type { NonEmptyTuple } from 'type-fest';
 
-export function makeBucketObjectKey(...parts: NonEmptyArray<string>) {
+export function encodeBucketObjectKey(...parts: NonEmptyTuple<string>) {
 	return parts.join('/');
 }

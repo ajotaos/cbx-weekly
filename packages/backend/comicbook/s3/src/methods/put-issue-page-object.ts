@@ -1,62 +1,44 @@
-import { makeIssuePageBucketObjectKey } from '../keys';
+import { encodeIssuePageBucketObjectKey } from '../keys';
 
-import { fileTypeFromStream } from 'file-type';
-import { imageDimensionsFromStream } from 'image-dimensions';
-
-import ExifTransformer from 'exif-be-gone';
-import { ReReadable } from 'rereadable-stream';
+import { fileTypeFromBuffer } from 'file-type';
+import { imageDimensionsFromData } from 'image-dimensions';
 
 import { Upload } from '@aws-sdk/lib-storage';
 
 import { ulid } from 'ulidx';
 
-import * as vx from '@cbx-weekly/backend-comicbook-valibot';
+import * as vx from '@cbx-weekly/shared-valibot';
 import * as v from 'valibot';
 
-import type { RawIssuePageBucketObject } from '../types';
-
-import type { StripAmzMetaPrefixKeys } from '@cbx-weekly/backend-core-s3';
+import type { IssuePageBucketObject } from '../types';
 
 import type { S3Client } from '@aws-sdk/client-s3';
 
-import type { Readable } from 'node:stream';
-
-export type PutIssuePageObjectInBucketProps = {
-	index: number;
-	issueId: string;
-};
-
 export async function putIssuePageObjectInBucket(
-	body: Readable,
-	props: PutIssuePageObjectInBucketProps,
+	body: Uint8Array,
+	props: PutIssuePageObjectInBucket.Props,
 	bucketName: string,
 	client: S3Client,
 ) {
-	const { index, issueId } = parseProps(props);
-
-	const _body = body.pipe(new ExifTransformer()).pipe(new ReReadable());
-
+	const { issueId } = parseProps(props);
 	const { mimeType, dimensions } =
-		await extractBodyProps(_body).then(parseBodyProps);
+		await extractBodyProps(body).then(parseBodyProps);
 
-	const id = ulid();
-
-	const key = makeIssuePageBucketObjectKey({ id });
+	const id = ulid().toLowerCase();
+	const key = encodeIssuePageBucketObjectKey({ id, issueId });
 
 	const metadata = {
 		id,
-		'mime-type': mimeType,
 		dimensions: `${dimensions.width}x${dimensions.height}`,
-		index: `${index}`,
 		'issue-id': issueId,
-	} satisfies StripAmzMetaPrefixKeys<RawIssuePageBucketObject['Metadata']>;
+	} satisfies IssuePageBucketObject.Metadata.Raw;
 
 	const upload = new Upload({
 		client,
 		params: {
 			Bucket: bucketName,
 			Key: key,
-			Body: _body.rewind(),
+			Body: body,
 			Metadata: metadata,
 			ContentType: mimeType,
 		},
@@ -64,46 +46,47 @@ export async function putIssuePageObjectInBucket(
 
 	await upload.done();
 
-	return { object: { metadata: { id } } };
+	return { object: { metadata: { id, issueId } } };
 }
 
-function parseProps(input: unknown) {
-	return v.parse(propsSchema, input, {
-		abortEarly: true,
-		abortPipeEarly: true,
-	});
-}
-
-const propsSchema = v.strictObject({
-	index: v.pipe(v.number(), v.integer(), v.minValue(0)),
-	issueId: v.pipe(v.string(), vx.ulid()),
-});
-
-function parseBodyProps(input: unknown) {
-	return v.parse(bodyPropsSchema, input, {
-		abortEarly: true,
-		abortPipeEarly: true,
-	});
-}
-
-const bodyPropsSchema = v.strictObject({
-	mimeType: v.literal('image/jpeg'),
-	dimensions: v.strictObject({
-		width: v.pipe(v.number(), v.integer(), v.minValue(1)),
-		height: v.pipe(v.number(), v.integer(), v.minValue(1)),
+const parseProps = v.parser(
+	v.strictObject({
+		issueId: v.pipe(v.string(), vx.ulid()),
 	}),
-});
+	{
+		abortEarly: true,
+		abortPipeEarly: true,
+	},
+);
 
-async function extractBodyProps(body: ReReadable) {
-	const [mimeType, dimensions] = await Promise.all([
-		fileTypeFromStream(body.rewind()).then(
-			(file) => file?.mime ?? 'application/octet-stream',
-		),
-		imageDimensionsFromStream(body.rewind()).then((dimensions) => ({
-			width: dimensions?.width ?? 0,
-			height: dimensions?.height ?? 0,
-		})),
-	]);
+async function extractBodyProps(body: Uint8Array) {
+	const mimeType = await fileTypeFromBuffer(body).then(
+		(file) => file?.mime ?? 'application/octet-stream',
+	);
+
+	const dimensions = imageDimensionsFromData(body) ?? { width: 0, height: 0 };
 
 	return { mimeType, dimensions };
+}
+
+const parseBodyProps = v.parser(
+	v.strictObject({
+		mimeType: v.literal('image/jpeg'),
+		dimensions: v.strictObject(
+			v.entriesFromList(
+				['width', 'height'],
+				v.pipe(v.number(), v.integer(), v.minValue(1)),
+			),
+		),
+	}),
+	{
+		abortEarly: true,
+		abortPipeEarly: true,
+	},
+);
+
+export declare namespace PutIssuePageObjectInBucket {
+	type Props = {
+		issueId: string;
+	};
 }

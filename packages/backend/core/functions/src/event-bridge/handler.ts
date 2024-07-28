@@ -1,21 +1,19 @@
-import middy from '@middy/core';
+import { Idempotency } from '../idempotency';
 
 import { makeIdempotent } from '@aws-lambda-powertools/idempotency';
-import {
-	makeIdempotencyConfig,
-	makeIdempotencyPersistenceStore,
-} from '../idempotency';
+
+import middy from '@middy/core';
 
 import * as v from 'valibot';
 
-import type { BaseEventBridgeEvent } from './types';
-
-import type { Idempotency } from '../idempotency';
+import type { EventBridgeEvent } from './types';
 
 import type { Context } from 'aws-lambda';
 
-export function makeEventBridge<
-	TEventSchema extends v.GenericSchema<BaseEventBridgeEvent>,
+import type { PartialDeep } from 'type-fest';
+
+export function createEventBridge<
+	TEventSchema extends v.GenericSchema<PartialDeep<EventBridgeEvent>>,
 >(eventSchema: TEventSchema) {
 	type Handler = (
 		record: v.InferOutput<TEventSchema>,
@@ -23,34 +21,26 @@ export function makeEventBridge<
 	) => Promise<void>;
 
 	return {
-		handler(handler: Handler) {
+		eventHandler(handler: Handler) {
 			return middy().use(eventValidator(eventSchema)).handler(handler);
 		},
-		idempotent(idempotency: Idempotency) {
-			const idempotencyPersistenceStore = makeIdempotencyPersistenceStore(
-				idempotency.tableName,
-			);
-			const idempotencyConfig = makeIdempotencyConfig(idempotency.options);
+		idempotent(tableName: string, options: Idempotency.Options) {
+			const idempotency = Idempotency.create(tableName, options);
 
 			return {
-				handler(handler: Handler) {
+				eventHandler(handler: Handler) {
 					return middy()
 						.use(eventValidator(eventSchema))
-						.handler(
-							makeIdempotent(handler, {
-								persistenceStore: idempotencyPersistenceStore,
-								config: idempotencyConfig,
-							}),
-						);
+						.handler(makeIdempotent(handler, idempotency));
 				},
 			};
 		},
 	};
 }
 
-function eventValidator<TSchema extends v.GenericSchema<BaseEventBridgeEvent>>(
-	schema: TSchema,
-): middy.MiddlewareObj<v.InferOutput<TSchema>> {
+function eventValidator<
+	TSchema extends v.GenericSchema<PartialDeep<EventBridgeEvent>>,
+>(schema: TSchema): middy.MiddlewareObj<v.InferOutput<TSchema>> {
 	return {
 		before(request) {
 			request.event = v.parse(schema, request.event, {
