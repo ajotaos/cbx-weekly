@@ -1,15 +1,22 @@
 {
-  "name": "monorepo-template",
-  "version": "0.0.0",
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {},
-  "devDependencies": {
-    "@tsconfig/node20": "^20.1.4",
-    "typescript": "5.6.2"
-  },
-  "dependencies": {
-    "sst": "^3"
-  }
+	"name": "cbx-weekly",
+	"version": "1.0.0",
+	"scripts": {
+		"format": "biome check --write ."
+	},
+	"dependencies": {
+		"sst": "3.4.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@tsconfig/node22": "^22.0.0",
+		"@tsconfig/strictest": "^2.0.5",
+		"typescript": "^5.7.2"
+	},
+	"pnpm": {
+		"supportedArchitectures": {
+			"cpu": ["arm64", "current"],
+			"os": ["linux", "current"]
+		}
+	}
 }

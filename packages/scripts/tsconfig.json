@@ -1,7 +1,10 @@
 {
-  "extends": "@tsconfig/node20/tsconfig.json",
-  "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-  },
+	"extends": [
+		"@tsconfig/strictest/tsconfig.json",
+		"@tsconfig/node22/tsconfig.json"
+	],
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "Bundler"
+	}
 }

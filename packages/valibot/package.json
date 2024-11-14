@@ -1,0 +1,19 @@
+{
+	"name": "@cbx-weekly/valibot",
+	"version": "0.0.0",
+	"exports": {
+		"./*": ["./src/*/index.ts"]
+	},
+	"scripts": {
+		"test": "sst shell vitest"
+	},
+	"dependencies": {
+		"sst": "3.4.3",
+		"valibot": "1.0.0-beta.3"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.1",
+		"type-fest": "^4.29.0",
+		"vitest": "^2.1.6"
+	}
+}
