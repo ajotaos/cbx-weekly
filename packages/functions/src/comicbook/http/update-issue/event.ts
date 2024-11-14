@@ -1,0 +1,18 @@
+import * as v from '@cbx-weekly/valibot/core';
+
+import { camelKeys } from 'string-ts';
+
+export const eventSchema = v.object({
+	pathParameters: v.pipe(
+		v.strictObject({
+			issue_id: v.pipe(v.string(), v.id()),
+		}),
+		v.transform(camelKeys),
+	),
+	body: v.variant('type', [
+		v.strictObject({
+			type: v.literal('pageset-id'),
+			pagesetId: v.nullable(v.pipe(v.string(), v.id())),
+		}),
+	]),
+});
